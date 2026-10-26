@@ -1,0 +1,10 @@
+{
+  "compilerOptions": {
+    "target": "ES2022", "module": "ESNext", "moduleResolution": "Bundler",
+    "lib": ["ES2022", "DOM"], "types": ["node"],
+    "experimentalDecorators": true, "useDefineForClassFields": false,
+    "strict": true, "skipLibCheck": true, "esModuleInterop": true, "noEmit": true,
+    "paths": { "tabby-codex-references": ["./src/index.ts"] }
+  },
+  "include": ["src", "test", "examples"]
+}

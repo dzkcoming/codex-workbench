@@ -1,0 +1,13 @@
+import { mkdirSync, chmodSync, existsSync } from 'node:fs';
+import { homedir } from 'node:os';
+import { resolve, join } from 'node:path';
+export const root = resolve(process.env.WORKBENCH_ROOT || process.cwd());
+export const dataDir = resolve(process.env.WORKBENCH_DATA || join(root, 'data'));
+mkdirSync(dataDir, { recursive: true, mode: 0o700 });
+chmodSync(dataDir, 0o700);
+export const socketPath = join(dataDir, 'terminal.sock');
+const userCodex = join(homedir(), '.local/bin/codex');
+export const codexBin = process.env.CODEX_BIN || (existsSync(userCodex) ? userCodex : 'codex');
+export const codexVersion = '0.163.0';
+export const uid = () => crypto.randomUUID();
+export const now = () => new Date().toISOString();

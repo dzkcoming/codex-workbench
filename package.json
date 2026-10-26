@@ -1,0 +1,50 @@
+{
+  "name": "codex-terminal-workbench",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "engines": {
+    "node": ">=22.13"
+  },
+  "scripts": {
+    "build:tabby": "node tabby/build.mjs",
+    "check:tabby": "tsc -p tabby/tsconfig.json",
+    "test:tabby": "tsx --test tabby/test/*.test.ts",
+    "test:tabby:system": "node tests/tabby-system.mjs",
+    "test:tabby:panes": "node tests/tabby-pane-tabs.mjs",
+    "test:tabby:pane-actions": "node tests/tabby-pane-actions.mjs",
+    "test:tabby:pane-navigation": "node tests/tabby-pane-navigation.mjs",
+    "test:tabby:pane-cwd": "node tests/tabby-pane-cwd.mjs",
+    "test:tabby:browser": "node tests/tabby-browser.mjs",
+    "test:tabby:basket": "node tests/tabby-basket.mjs",
+    "test:tabby:context-menu": "node tests/tabby-context-menu.mjs",
+    "test:tabby:direct-reference": "TABBY_TEST_DESKTOP_AUTH=1 node tests/tabby-direct-reference.mjs",
+    "test:tabby:codex": "node tests/tabby-codex.mjs",
+    "build": "tsc -p tsconfig.server.json && vite build",
+    "check": "tsc --noEmit && tsc -p tsconfig.server.json --noEmit",
+    "test": "tsx --test tests/*.test.ts",
+    "test:system": "node tests/system.mjs",
+    "test:codex": "WORKBENCH_CODEX_TEST=1 node tests/system.mjs",
+    "protocol": "codex app-server generate-ts --out protocol"
+  },
+  "dependencies": {
+    "@modelcontextprotocol/sdk": "1.32.2",
+    "@xterm/addon-fit": "0.11.0",
+    "@xterm/xterm": "6.0.0",
+    "node-pty": "1.1.0",
+    "react": "19.3.1",
+    "react-dom": "19.3.1",
+    "serialport": "13.0.0",
+    "zod": "4.6.7"
+  },
+  "devDependencies": {
+    "@playwright/test": "1.64.1",
+    "@types/node": "26.6.5",
+    "@types/react": "19.3.0",
+    "@types/react-dom": "19.3.0",
+    "@vitejs/plugin-react": "6.1.2",
+    "tsx": "4.23.15",
+    "typescript": "7.0.2",
+    "vite": "8.3.5"
+  }
+}

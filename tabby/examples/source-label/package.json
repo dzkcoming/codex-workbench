@@ -1,0 +1,9 @@
+{
+  "name": "tabby-reference-source",
+  "version": "0.1.0",
+  "private": true,
+  "author": "Local Workbench",
+  "description": "Codex 引用扩展示例：复制来源标识。",
+  "keywords": ["tabby-plugin"],
+  "main": "dist/index.cjs"
+}
