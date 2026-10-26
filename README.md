@@ -1,112 +1,110 @@
-# Codex 多终端调试台
+# Codex Workbench
 
-当前主线是 **原版 Codex CLI + Tabby 终端引用插件**。首版已安装，桌面入口名为 **Tabby · Codex 引用**，运行 `./start-tabby.sh` 也可打开。支持选区固定快照、复制引用、历史引用页、只读 MCP，以及独立插件扩展示例。
+基于 **Tabby 终端 + 原版 Codex CLI** 的多终端调试工作台。目标是在保持日常终端操作方式的基础上，让 Shell、串口和 GDB 的输出更方便地进入当前 Codex 对话，并支持继续扩展插件。
 
-日常引用已简化为 **引用到 Codex**：在右侧终端选中文本，右键 **引用到 Codex** 或按 **Ctrl+Shift+Y**，放入同一顶部调试页接收分屏当前显示的 Codex 草稿，不自动发送。左侧切换 Codex 标签后，后续引用随之切换；多个可见 Codex 分屏时首次选择接收分屏。无法确认目标时复制引用并提示手动粘贴。原 **引用篮** 保留为备用收集入口，Codex 仍在普通终端中自行启动。
+典型用法：左侧运行 Codex，右侧分别打开串口和 GDB；在右侧选中日志，按 **Ctrl+Shift+Y**，内容进入左侧 Codex 的未发送草稿，再补充问题并自行发送。
 
-已增加 **分屏内独立标签页**：保留窗口顶部标签，在一个标签中分屏，再在每个分屏内分别切换多个终端。入口是工具栏的“分屏内标签”，每个分屏用“＋”添加终端、用“⋯”新建分屏或打开 SSH、串口、Codex。
+这是独立社区项目，与 Tabby、OpenAI 无官方隶属或背书关系。
 
-分屏内也支持 **网页 / 本地 HTML 标签**：点击工具栏地球图标，或 **⋯ → 在此分屏打开网页 / HTML…**。网页与终端共用标签切换、改名和布局恢复；Ctrl+Shift+T 仍新建终端。
+## 与原版 Tabby 的关系
 
-详细步骤、验证结果和扩展方法见 [Tabby 引用插件说明](tabby/README.md)。完整需求与阶段记录见 [设计文档](codex-terminal-workbench-design.md)。
+本仓库交付的是 **Tabby 插件、工作台配置和安装启动脚本**。安装脚本下载并校验官方 **Tabby 1.0.238**，插件加载到独立配置目录 `~/.config/tabby-codex`；当前没有修改或重新编译 Tabby 上游源码、替换官方终端内核。
 
-下文描述此前实现的 Web 工作台：React + TypeScript + xterm.js 前端，独立 Node.js 终端采集服务，Codex App Server 与 stdio MCP。
+下表描述基于该版本新增或调整的行为。分屏、Shell、SSH、串口连接本身由 Tabby 提供；本项目的主要改动集中在分屏内标签、跨终端引用、网页整合和交互方式。
 
-## 已有 Web 工作台的使用
+| 方面 | 本工作台的新增或调整 |
+| --- | --- |
+| 分屏内标签 | 保留原来的顶部标签，每个分屏再拥有自己的终端/网页标签栏，各分屏独立切换 |
+| 新建终端 | 分屏内按 Ctrl+Shift+T 或点击“＋”，在当前分屏新增标签；新建本地 Shell 优先继承来源终端实时工作目录 |
+| 标签命名 | 双击分屏内部标签即可修改名称；布局、名称和选中项接入 Tabby 恢复机制 |
+| 键盘导航 | Alt+1～9 切换当前分屏内部标签，Alt+方向键按位置切换分屏焦点 |
+| 正文右键菜单 | 精简为复制、粘贴、向右分屏、向下分屏、引用到 Codex 五项；其他管理入口保留在标签栏或设置中 |
+| 分屏浮层 | 工作台配置取消原生 Ctrl+Shift 重新排列分屏绑定，避免仅按修饰键就显示终端名称浮层 |
+| 引用到 Codex | 选区直接插入同一顶部工作页内接收分屏当前显示的 Codex 草稿，保留已有输入，不自动提交 |
+| 固定引用与引用篮 | 保存选区、来源和时间等信息；支持历史查看，以及备用的多条收集、备注、排序与复制 |
+| 网页 / 本地 HTML | 在分屏内部打开网页，与终端共用标签切换、改名和布局恢复 |
+| 扩展接口 | 导出引用服务和操作扩展接口，提供独立插件示例及可选的只读 MCP |
+
+普通单终端页面的 Ctrl+Shift+T 仍新建顶部标签，Alt+数字仍切换顶部标签。进入分屏内部标签容器后，才使用内部标签规则。隐藏终端继续运行和接收输出。
+
+## 日常引用流程
+
+1. 在设置的 **Codex 引用** 中选择本机项目目录。
+2. 在普通终端进入项目并运行 `codex`，通过正文右键创建左右或上下分屏。
+3. 在其他分屏打开调试终端，选中输出，右键 **引用到 Codex** 或按 **Ctrl+Shift+Y**。
+4. 回到 Codex，补充问题后自行提交。引用成功时焦点仍留在来源终端，剪贴板不变。
+
+接收目标按**分屏**记忆：该分屏切换到另一个 Codex 标签后，后续引用跟随当前显示项。多个可见 Codex 分屏时，首次选择接收分屏；也可在顶部标签栏右键的 **Codex 引用 → 选择接收引用的分屏…** 中更换。隐藏标签和其他顶部工作页不接收。
+
+每次引用保存不可变快照。短选区插入内容与来源，超过 4000 字符时插入完整快照路径。快照位于所选项目的 `.terminal-references/`，不随终端后续输出改变。备用引用篮通过顶部标签栏菜单收集，按 **Ctrl+Shift+B** 打开整理页。
+
+自动投递目前针对 **Linux 本机前台运行的 Codex**，通过进程和终端界面保守识别输入状态。目标退出、切到 Shell、处于选择菜单或无法确认时，改为复制并提示手动粘贴。SSH/tmux 内的 Codex 不支持自动投递；右侧引用来源仍可使用 Tabby 的 SSH、串口等终端。终端界面识别不等于 Codex 的结构化编辑器 API，不能保证与其内部状态原子同步。
+
+## 网页与插件扩展
+
+点击工具栏地球图标，或分屏 **⋯ → 在此分屏打开网页 / HTML…**，即可打开 HTTP/HTTPS 地址或本地 HTML。支持地址栏、后退、前进、刷新和本地文件选择。网页组件基于 **tabby-browser 0.2.0** 定制，已整合到本插件中。
+
+网页与终端共用内部标签；网页中的 Ctrl+Shift+T 仍用于新建终端。网页选区目前通过普通复制使用，尚未接入终端固定引用流程。
+
+插件导出 `ReferenceActionProvider`、`ReferencesService` 和 `ReferenceSummary`，独立插件可为引用增加操作。示例见 [source-label](tabby/examples/source-label/index.ts)。可选只读 MCP 提供 `reference_list`、`reference_read`、`reference_search`，详见 [插件说明](tabby/README.md)。
+
+## 实现边界
+
+- 普通终端输入与设备输出继续使用 Tabby 原有通路；插件没有添加 PTY 收发代理或持续采集终端输出。创建引用时按需处理当前选区。
+- Codex 由用户在普通终端自行启动，继续管理自己的登录、模型、审批、技能和会话。工作台不修改 Codex 程序；可选 MCP 启动器仅为该次进程追加配置。
+- 布局恢复会重新启动或连接终端，不保留退出应用前的进程。Codex 会话恢复仍使用其原生 `resume`。
+- Tabby 退出会关闭它持有的串口连接；当前桌面插件不提供退出后的后台持续采集。
+- 插件有针对 Tabby 1.0.238 的焦点与快捷键适配。升级宿主需要重新验证，不能保证所有版本兼容或零性能开销。
+
+## 安装与启动
+
+当前安装脚本面向 **Linux x86_64**，需要 npm、Python 3、`dpkg-deb` 及相关原生依赖构建工具。Codex CLI 需自行安装并登录。
+
+在仓库根目录准备本地 Node 运行时及依赖，再安装插件：
 
 ```bash
-./start.sh          # 经 AI Entry 启动后台，打开浏览器并自动登录
-./start.sh --no-open
-./stop.sh           # 停止全部后台与终端连接，保留历史记录
-```
-
-页面：<http://127.0.0.1:10017/>。AI Entry：<http://127.0.0.1:10000/>，位于「Agent 工作流」。程序默认监听 `0.0.0.0:10017`，可从本机局域网地址访问。
-
-应用菜单已安装「Codex 调试台」。直接从 Portal 或局域网首次访问时，填写项目 `data/access-token` 中的口令；`start.sh` 会自动登录。口令只用于此工作台，浏览器不会得到 Codex 登录凭证。不要将 `data/` 提交到版本库。
-
-1. 选择当前项目，或添加一个已存在的项目目录。
-2. 添加本地 Shell、SSH 主机/配置别名、或串口路径与波特率。串口默认 8N1；SSH 使用系统客户端，登录和主机指纹确认在终端中完成。
-3. 在终端中直接输入；切到「日志」可搜索历史、勾选记录并引用范围。搜索是区分大小写的字面量搜索，支持跨分包与分页。
-4. 在对话中输入 `@build` 或 `@{含空格的终端名}`，会固定最近最多 16 条记录（最多 64 KiB）并附带来源、会话和批次。也可使用「引用最近日志」。模型能通过 MCP 追加检索。
-5. 点击回答中的日志引用可跳转原始记录。固定快照保留原始文本，即使对应原始文件被人工移除也能查看。
-6. 默认只有人工能输入终端。开启「允许模型输入」后，模型可通过 MCP 发送；关闭后会取消尚未开始的模型输入，已发出的命令不会撤销。
-7. 一轮测试前点击「开始新批次」，该项目所有终端后续日志共享新的 `run_id`。
-
-每个项目保存一个当前 Codex 会话；会话菜单提供新建和重启。新建后旧会话仍在 Codex 本地记录与工作台数据库中，第一版没有旧会话选择器。
-
-## 安装与验证
-
-```bash
-./setup.sh
+npm install --prefix .runtime --save-exact node@22.23.4
 source scripts/runtime.sh
-export PATH="$PWD/node_modules/.bin:$PATH"
-tsc --noEmit
-tsc -p tsconfig.server.json --noEmit
-tsx --test tests/*.test.ts
-node tests/system.mjs
-WORKBENCH_CODEX_TEST=1 node tests/system.mjs
+npm ci
+./setup-tabby.sh
+./start-tabby.sh
 ```
 
-`setup.sh` 在项目 `.runtime/` 安装固定的 Node.js 22.23.4，`npm ci` 使用锁定依赖，然后构建、注册 Portal 和应用菜单入口，不替换系统 Node。初次安装需要 npm、网络和 Linux 原生依赖构建工具（如果当前平台没有预编译包）。
+脚本将官方 Tabby 解包到 `.runtime/tabby-app`，为插件创建安装链接，并添加 **Tabby · Codex 引用** 桌面入口。修改插件并重新构建后，已打开的 Tabby 需重启才能加载新版；请先结束当前调试工作。
 
-对应 npm 脚本为 `check`、`build`、`test`、`test:system`、`test:codex`。若默认 npm 版本过旧，使用本机较新的 npm，或直接运行上述本地命令。
+## 源码与验证
 
-系统测试在 `test-results/system-*` 创建独立数据目录、伪串口和仅绑定回环地址的临时 sshd，不连接工位设备，也不修改 SSH 全局配置。依赖 `python3`、`ssh`、`sshd`、`ssh-keygen` 和 `/usr/bin/google-chrome`。真实模型测试会使用现有 Codex 登录和额度，验证实际 MCP 调用、两个来源的准确引用、重启后的连续采集和同一会话恢复。测试截图与报告保存在测试目录。
-
-协议固定为 **Codex CLI 0.163.0**。优先使用 `CODEX_BIN`，否则使用 `~/.local/bin/codex`，最后才查找 `PATH`；发现其他版本会明确拒绝启动对话。`protocol/` 是由本机该版本 `codex app-server generate-ts` 生成的类型。升级时重新生成并运行系统测试，不能仅修改版本字符串。
-
-接口依据：[官方 App Server 文档](https://learn.chatgpt.com/docs/app-server)。当前实现使用 stdio JSON-RPC，保留 Codex 原有模型循环、内置工具、审批与上下文管理，没有抓取 CLI 屏幕。
-
-## 服务与数据
-
-```text
-AI Entry → supervisor
-             ├─ terminal-service ─ PTY / ssh / SerialPort
-             │       ├─ data/terminal.sqlite
-             │       ├─ data/raw/<session>.<part>.bin
-             │       └─ data/terminal.sock（仅本用户可访问）
-             └─ app ─ HTTP :10017 ─ 浏览器
-                    ├─ data/chat.sqlite
-                    └─ codex app-server ─ MCP 薄适配进程 ─ terminal.sock
-```
-
-终端服务单独持有设备。网页刷新/关闭、停止模型任务、重启 Codex 或重启 Web 后端均不关闭采集。supervisor 自动重启崩溃的服务。采集服务本身崩溃会关闭设备；恢复时将未关闭会话标为可能缺失，用户需手动重连，重连会创建新 `session_id`。
-
-原始字节按 16 MiB 分段，写入并同步后才发布 SQLite 索引。读取按序号游标返回 `next_cursor`、`has_more`、缺口和断开原因。UTF-8 使用流式解码，原始控制字符保留。日志视图不是全屏终端屏幕的语义解析；复杂全屏程序不属于第一版保证范围。
-
-浏览器每次只读取有限数据，等待 xterm 消化后再取下一批；屏幕首次回放最近 128 条，列表最多显示最近 1500 条，完整历史仍可搜索。暂停显示只暂停浏览器读取。输入队列限制为 128 个请求，单次输入最大 64 KiB。持久化故障会停止采集并显示错误，不静默丢弃。
-
-`data/` 包含原始输出、人工与模型输入、引用快照及对话，应按本地私有调试数据管理。当前保留完整历史，不自动删除旧日志；文件分段不代表总磁盘空间有上限。断电、主机休眠、磁盘故障或采集进程崩溃不能保证连续采集。
-
-发送状态为 `queued → writing → sent`，失败可能成为 `unknown`。相同 `operation_id` 与内容只返回原记录，复用 ID 发送不同内容会报错。`sent` 仅表示交给连接，不保证设备执行完成。`terminal_wait` 必须从操作的 `before_cursor` 之后等待，返回 `matched`、`timeout`、`disconnected` 或 `gap`。崩溃时正在写入的操作恢复为 `unknown`，不得盲目重发。
-
-`matched` 只说明新输出中出现了目标文本，命令回显也可能命中。判断执行成功应使用独立结束标记、退出码或设备明确的完成条件。
-
-## MCP 与权限
-
-提供 `terminal_list`、`terminal_sessions`、`terminal_read`、`terminal_search`、`terminal_send`、`terminal_wait`、`operation_status`、`snapshot_create`。每个 MCP 进程绑定项目，无法读写其他项目的终端。stdio 进程退出不关闭设备。
-
-MCP 通过每个 App Server 会话的配置覆盖注入，不修改 `~/.codex/config.toml`。复用已有 Codex 身份、模型与权限配置。内置命令、文件修改、权限申请和用户提问事件显示在对话中；未支持的服务器请求会明确返回错误。
-
-Web 接口使用独立随机口令、HttpOnly / SameSite cookie 和同源检查。HTTP 页面属于本机/可信局域网工具，没有提供互联网部署与多用户隔离。
-
-## 开发与当前边界
-
-- `server/store.ts`：原始日志、SQLite、游标、查询和不可变引用。
-- `server/terminal-service.ts`：Shell / SSH / 串口、发送队列和等待。
-- `server/mcp.ts`：绑定项目的 MCP 适配。
-- `server/codex.ts`：版本校验、JSON-RPC、流式事件、会话恢复和审批。
-- `server/app.ts`：浏览器 API、访问控制与静态页面。
-- `web/`：三栏工作台、终端分屏、引用、搜索和对话。
-
-第一版没有自动 panic 唤醒模型、无人值守调试、GDB 专用适配、任意外部终端接管、串口流控配置或自动日志清理。支持一个活动 Codex 任务、多个项目、约三个日常受管理终端。
-
-本地独立调试可运行：
+| 位置 | 职责 |
+| --- | --- |
+| `tabby/src/pane-tabs.ts` | 分屏内部标签、工作目录继承、快捷键、布局与焦点适配 |
+| `tabby/src/codex-reference.ts`、`codex-target.ts` | 接收分屏选择、Codex 检查与草稿投递 |
+| `tabby/src/index.ts` | 菜单、设置、快捷键与扩展接口集成 |
+| `tabby/src/browser-tab.ts`、`browser-host.ts` | 网页视图、分屏整合和网页快捷键 |
+| `tabby/src/references.ts`、`basket.ts`、`reference-basket.ts` | 不可变引用、引用篮与整理界面 |
+| `tabby/src/worker.ts`、`mcp.ts` | 按需后台处理与只读 MCP |
+| `scripts/install-tabby.py`、`setup-tabby.sh`、`start-tabby.sh` | 官方应用下载校验、配置、安装和启动 |
+| `tabby/test/`、`tests/tabby-*.mjs` | 领域测试与真实桌面集成测试 |
 
 ```bash
 source scripts/runtime.sh
-WORKBENCH_DATA=/tmp/workbench-dev node dist/server/supervisor.js \
-  --allow-standalone --host 127.0.0.1 --port 18017
+npm run check:tabby
+npm run build:tabby
+npm run test:tabby
+npm run test:tabby:direct-reference
 ```
 
-日常启停应使用 Portal / `start.sh` / `stop.sh`。Web 后端和采集日志位于 AI Entry 的 `run/codex-workbench.log`。
+直接引用已在真实 Tabby 1.0.238 + Codex 0.164.0 上通过九项集成检查，并完成菜单、引用篮和分屏导航回归。测试结合实际键盘/菜单操作、终端输入与进程状态断言，部分布局辅以截图检查。详细结果与限制见 [VALIDATION.md](VALIDATION.md)；测试产物保存在本地 `test-results/`，不随源码提交。
+
+## 上游与许可证
+
+- [Tabby](https://github.com/Eugeny/tabby)：MIT；保留 [上游许可证](tabby/licenses/Tabby-MIT.txt)。
+- [tabby-browser](https://github.com/karolnowacki/tabby-browser)：MIT；已保留许可证、作者和本地改动说明，见 [第三方代码说明](tabby/licenses/README.md)。
+- `protocol/` 是早期 Web 方案使用的 Codex 生成协议类型，来源、Apache-2.0 许可证及上游 NOTICE 见 [protocol/README.md](protocol/README.md)。
+
+**本仓库自有代码尚未选择发布许可证**，上述上游许可证不代表整个仓库已经统一采用 MIT。发布方式、现有声明及待处理项见 [许可证检查](LICENSE_REVIEW.md)。
+
+## 更多文档
+
+- [Tabby 功能使用与开发说明](tabby/README.md)
+- [设计与阶段记录](codex-terminal-workbench-design.md)
+- [早期 Web 工作台](WEB_WORKBENCH.md)：保留 React、独立采集服务和 Codex App Server 方案；与当前 Tabby 插件分开运行。
