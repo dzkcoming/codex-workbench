@@ -6,6 +6,12 @@
 
 这是独立社区项目，与 Tabby、OpenAI 无官方隶属或背书关系。
 
+## 功能演示
+
+[![分屏与 Codex 引用演示](docs/demo/preview.gif)](https://github.com/dzkcoming/codex-workbench/raw/refs/heads/main/docs/demo/workbench-demo.mp4)
+
+[观看完整视频（MP4，中文字幕）](https://github.com/dzkcoming/codex-workbench/raw/refs/heads/main/docs/demo/workbench-demo.mp4) · [演示内容与录制说明](docs/demo/README.md)
+
 ## 与原版 Tabby 的关系
 
 本仓库交付的是 **Tabby 插件、工作台配置和安装启动脚本**。安装脚本下载并校验官方 **Tabby 1.0.238**，插件加载到独立配置目录 `~/.config/tabby-codex`；当前没有修改或重新编译 Tabby 上游源码、替换官方终端内核。
